@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Ví & Tài Khoản Ngân Hàng - HomeFinance{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-extrabold text-slate-800">Ví & Tài Khoản Ngân Hàng</h1>
+            <p class="text-sm text-slate-500">Quản lý dòng tiền mặt, tài khoản ngân hàng, ví điện tử và sổ tiết kiệm</p>
+        </div>
+
+        <div class="flex items-center gap-2.5">
+            <!-- Quick Transfer Button -->
+            <button onclick="switchTxTab('transfer'); openModal('quickAddModal')" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 text-sm font-semibold transition-all">
+                <i class="fa-solid fa-arrow-right-arrow-left text-xs"></i>
+                <span>Chuyển tiền giữa các ví</span>
+            </button>
+
+            <!-- Add Account Button -->
+            <button onclick="openModal('addAccountModal')" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-md shadow-blue-500/20 active:scale-95 transition-all">
+                <i class="fa-solid fa-plus text-xs"></i>
+                <span>Thêm tài khoản mới</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Total Net Balance Highlight -->
+    <div class="bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+        <div>
+            <span class="text-xs uppercase font-bold tracking-widest text-indigo-300">Tổng Số Dư Khả Dụng (Tất cả ví & sổ)</span>
+            <div class="text-3xl sm:text-4xl font-extrabold text-white mt-2">{{ total_balance | currency }}</div>
+            <p class="text-xs text-indigo-200 mt-1">Bao gồm tiền mặt, tài khoản thanh toán và các khoản tiền gửi tiết kiệm</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md text-xs font-semibold text-indigo-100 border border-white/10">
+                <i class="fa-solid fa-shield-halved mr-1 text-emerald-400"></i>An toàn & Bảo mật
+            </span>
+        </div>
+    </div>
+
+    <!-- Accounts Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for a in accounts %}
+        <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group {% if not a.is_active %}opacity-60 bg-slate-50{% endif %}">
+            <div>
+                <!-- Top Row -->
+                <div class="flex items-start justify-between gap-3 mb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-sm" style="background-color: {{ a.color }}">
+                            {% if a.type == 'cash' %}
+                                <i class="fa-solid fa-wallet"></i>
+                            {% elif a.type == 'bank' %}
+                                <i class="fa-solid fa-building-columns"></i>
+                            {% elif a.type == 'ewallet' %}
+                                <i class="fa-solid fa-mobile-screen-button"></i>
+                            {% elif a.type == 'saving' %}
+                                <i class="fa-solid fa-piggy-bank"></i>
+                            {% else %}
+                                <i class="fa-solid fa-credit-card"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-base">{{ a.name }}</h3>
+                            <span class="inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
+                                {% if a.type == 'cash' %}Tiền mặt
+                                {% elif a.type == 'bank' %}Ngân hàng
+                                {% elif a.type == 'ewallet' %}Ví điện tử
+                                {% elif a.type == 'saving' %}Sổ tiết kiệm
+                                {% else %}Thẻ tín dụng{% endif %}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Status indicator -->
+                    {% if a.is_active %}
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500" title="Đang hoạt động"></span>
+                    {% else %}
+                        <span class="w-2.5 h-2.5 rounded-full bg-slate-400" title="Đã ngưng sử dụng"></span>
+                    {% endif %}
+                </div>
+
+                <!-- Account number / note -->
+                {% if a.account_number %}
+                <div class="text-xs text-slate-500 font-mono mb-1.5 flex items-center gap-1.5">
+                    <i class="fa-solid fa-hashtag text-[10px] text-slate-400"></i>
+                    <span>STK: {{ a.account_number }}</span>
+                </div>
+                {% endif %}
+
+                {% if a.note %}
+                <p class="text-xs text-slate-400 italic mb-4 line-clamp-2">"{{ a.note }}"</p>
+                {% endif %}
+            </div>
+
+            <!-- Bottom: Balance & Action buttons -->
+            <div class="pt-4 border-t border-slate-100 flex items-center justify-between">
+                <div>
+                    <span class="text-[11px] font-semibold text-slate-400 uppercase">Số dư hiện tại</span>
+                    <div class="text-lg font-extrabold text-slate-800">{{ a.current_balance | currency }}</div>
+                </div>
+
+                <div class="flex items-center gap-1">
+                    <a href="/transactions?account_id={{ a.id }}" title="Lịch sử giao dịch" class="p-2 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                        <i class="fa-solid fa-clock-rotate-left text-xs"></i>
+                    </a>
+                    <button onclick="deleteAccount({{ a.id }})" title="Đóng / Xóa tài khoản" class="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors">
+                        <i class="fa-regular fa-trash-can text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+<!-- ================= ADD ACCOUNT MODAL ================= -->
+<div id="addAccountModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-100 animate-fade-in my-8">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+            <h3 class="font-bold text-lg text-slate-800">Thêm Tài Khoản / Ví Mới</h3>
+            <button onclick="closeModal('addAccountModal')" class="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-200">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <form id="addAccountForm" class="p-6 space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Tên tài khoản / Ví <span class="text-red-500">*</span></label>
+                <input type="text" name="name" placeholder="Ví dụ: Vietcombank - Bố, Ví MoMo, Tiền mặt..." required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-medium text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Loại tài khoản</label>
+                    <select name="type" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="bank">Ngân hàng</option>
+                        <option value="cash">Tiền mặt</option>
+                        <option value="ewallet">Ví điện tử</option>
+                        <option value="saving">Sổ tiết kiệm</option>
+                        <option value="credit">Thẻ tín dụng</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Màu nhận diện</label>
+                    <input type="color" name="color" value="#0ea5e9" class="w-full h-10 p-1 rounded-xl border border-slate-300 cursor-pointer bg-white">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Số dư ban đầu (VNĐ)</label>
+                <input type="number" step="1000" name="initial_balance" value="0" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Số tài khoản (Tùy chọn)</label>
+                <input type="text" name="account_number" placeholder="Ví dụ: 0071000888999" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Ghi chú</label>
+                <input type="text" name="note" placeholder="Mục đích sử dụng tài khoản này..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+
+            <div class="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
+                <button type="button" onclick="closeModal('addAccountModal')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50">
+                    Đóng
+                </button>
+                <button type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-md shadow-blue-500/20">
+                    Tạo tài khoản
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('addAccountForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(document.getElementById('addAccountForm'));
+    try {
+        const res = await fetch('/api/accounts', { method: 'POST', body: formData });
+        const result = await res.json();
+        if (result.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Đã tạo tài khoản!',
+                text: result.message,
+                timer: 1200,
+                showConfirmButton: false
+            }).then(() => window.location.reload());
+        } else {
+            Swal.fire('Lỗi', result.message, 'error');
+        }
+    } catch(e) {
+        Swal.fire('Lỗi', 'Không thể tạo tài khoản', 'error');
+    }
+});
+
+async function deleteAccount(accId) {
+    const confirm = await Swal.fire({
+        title: 'Đóng tài khoản này?',
+        text: 'Nếu đã có giao dịch gắn liền, tài khoản sẽ chuyển sang trạng thái ngưng hoạt động.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Đồng ý',
+        cancelButtonText: 'Hủy'
+    });
+
+    if (confirm.isConfirmed) {
+        try {
+            const res = await fetch(`/api/accounts/${accId}/delete`, { method: 'POST' });
+            const result = await res.json();
+            if (result.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Đã cập nhật!',
+                    timer: 1000,
+                    showConfirmButton: false
+                }).then(() => window.location.reload());
+            }
+        } catch(e) {
+            Swal.fire('Lỗi', 'Có lỗi xảy ra', 'error');
+        }
+    }
+}
+</script>
+{% endblock %}

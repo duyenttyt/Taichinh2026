@@ -1,0 +1,21 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Environment variables & secrets
+.env
+
+# Temporary / OS files
+.DS_Store
+Thumbs.db
+*.log
+
+# CSDL SQLite (Dữ liệu tài chính riêng tư)
+# Bỏ comment dòng dưới nếu bạn muốn giữ database cục bộ trên máy và không đẩy dữ liệu chi tiêu thật lên GitHub:
+# finance.db

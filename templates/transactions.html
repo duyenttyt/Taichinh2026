@@ -1,0 +1,411 @@
+{% extends "base.html" %}
+
+{% block title %}Sổ Giao Dịch Thu - Chi - HomeFinance{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header & Action Row -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-extrabold text-slate-800">Sổ Thu - Chi Gia Đình</h1>
+            <p class="text-sm text-slate-500">Toàn bộ lịch sử thu nhập, chi tiêu và chuyển khoản giữa các ví</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2.5">
+            <!-- Export Excel Button -->
+            <a href="/export/excel?start_date={{ start_date }}&end_date={{ end_date }}&type={{ tx_type }}&account_id={{ account_id }}&category_id={{ category_id }}&member_id={{ member_id }}" class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-sm font-semibold transition-all">
+                <i class="fa-solid fa-file-excel text-emerald-600"></i>
+                <span>Xuất Excel</span>
+            </a>
+            <!-- Export CSV Button -->
+            <a href="/export/csv?start_date={{ start_date }}&end_date={{ end_date }}&type={{ tx_type }}&account_id={{ account_id }}&category_id={{ category_id }}&member_id={{ member_id }}" class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-sm font-semibold transition-all">
+                <i class="fa-solid fa-file-csv text-slate-500"></i>
+                <span>Xuất CSV</span>
+            </a>
+            <!-- Add Transaction Button -->
+            <button onclick="openModal('quickAddModal')" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-md shadow-blue-500/20 active:scale-95 transition-all">
+                <i class="fa-solid fa-plus text-xs"></i>
+                <span>Thêm giao dịch</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter Card -->
+    <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+        <form method="GET" action="/transactions" class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                <!-- From Date -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Từ ngày</label>
+                    <input type="date" name="start_date" value="{{ start_date }}" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                </div>
+                <!-- To Date -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Đến ngày</label>
+                    <input type="date" name="end_date" value="{{ end_date }}" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                </div>
+                <!-- Type -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Loại thu / chi</label>
+                    <select name="type" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-medium bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                        <option value="">-- Tất cả --</option>
+                        <option value="income" {% if tx_type == 'income' %}selected{% endif %}>Thu nhập (+)</option>
+                        <option value="expense" {% if tx_type == 'expense' %}selected{% endif %}>Chi tiêu (-)</option>
+                        <option value="transfer" {% if tx_type == 'transfer' %}selected{% endif %}>Chuyển khoản</option>
+                    </select>
+                </div>
+                <!-- Category -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Hạng mục</label>
+                    <select name="category_id" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-medium bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                        <option value="">-- Tất cả danh mục --</option>
+                        {% for c in categories %}
+                        <option value="{{ c.id }}" {% if category_id|string == c.id|string %}selected{% endif %}>{{ c.name }} ({{ 'Thu' if c.type == 'income' else 'Chi' }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <!-- Account / Wallet -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Tài khoản / Ví</label>
+                    <select name="account_id" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-medium bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                        <option value="">-- Tất cả ví --</option>
+                        {% for a in accounts %}
+                        <option value="{{ a.id }}" {% if account_id|string == a.id|string %}selected{% endif %}>{{ a.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <!-- Member -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Thành viên</label>
+                    <select name="member_id" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-medium bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                        <option value="">-- Tất cả thành viên --</option>
+                        {% for m in members %}
+                        <option value="{{ m.id }}" {% if member_id|string == m.id|string %}selected{% endif %}>{{ m.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Search and Action row -->
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-100">
+                <div class="relative w-full sm:w-80">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input type="text" name="search" value="{{ search }}" placeholder="Tìm kiếm ghi chú hoặc danh mục..." class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <a href="/transactions" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-100 text-sm font-semibold transition-colors">
+                        Xóa lọc
+                    </a>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition-colors flex items-center gap-1.5">
+                        <i class="fa-solid fa-filter text-xs"></i>
+                        <span>Lọc kết quả</span>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Filter Summary Bar -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-emerald-50/70 border border-emerald-200/60 rounded-2xl p-4 flex items-center justify-between">
+            <div>
+                <span class="text-xs font-bold text-emerald-800 uppercase tracking-wider">Tổng Thu (Theo bộ lọc)</span>
+                <div class="text-xl font-extrabold text-emerald-700 mt-1">+{{ sum_income | currency }}</div>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                <i class="fa-solid fa-arrow-down-long"></i>
+            </div>
+        </div>
+
+        <div class="bg-rose-50/70 border border-rose-200/60 rounded-2xl p-4 flex items-center justify-between">
+            <div>
+                <span class="text-xs font-bold text-rose-800 uppercase tracking-wider">Tổng Chi (Theo bộ lọc)</span>
+                <div class="text-xl font-extrabold text-rose-700 mt-1">-{{ sum_expense | currency }}</div>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold">
+                <i class="fa-solid fa-arrow-up-long"></i>
+            </div>
+        </div>
+
+        <div class="bg-blue-50/70 border border-blue-200/60 rounded-2xl p-4 flex items-center justify-between">
+            <div>
+                <span class="text-xs font-bold text-blue-800 uppercase tracking-wider">Dư Tích Lũy</span>
+                <div class="text-xl font-extrabold {% if (sum_income - sum_expense) >= 0 %}text-blue-700{% else %}text-rose-700{% endif %} mt-1">
+                    {{ (sum_income - sum_expense) | currency }}
+                </div>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                <i class="fa-solid fa-scale-balanced"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transactions Table Card -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <span class="text-sm font-bold text-slate-700">Hiển thị <span class="text-blue-600">{{ transactions | length }}</span> / {{ total_count }} giao dịch</span>
+            <span class="text-xs text-slate-400">Trang {{ page }} / {{ total_pages }}</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider border-b border-slate-200">
+                        <th class="py-3.5 px-4">Ngày GD</th>
+                        <th class="py-3.5 px-4">Loại</th>
+                        <th class="py-3.5 px-4">Hạng mục</th>
+                        <th class="py-3.5 px-4">Tài khoản / Ví</th>
+                        <th class="py-3.5 px-4">Thành viên</th>
+                        <th class="py-3.5 px-4">Ghi chú</th>
+                        <th class="py-3.5 px-4 text-right">Số tiền</th>
+                        <th class="py-3.5 px-4 text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% if transactions %}
+                        {% for tx in transactions %}
+                        <tr class="hover:bg-slate-50/80 transition-colors">
+                            <!-- Date -->
+                            <td class="py-3.5 px-4 whitespace-nowrap font-medium text-slate-600 text-xs">
+                                {{ tx.transaction_date | format_date }}
+                            </td>
+                            <!-- Type Badge -->
+                            <td class="py-3.5 px-4 whitespace-nowrap">
+                                {% if tx.type == 'income' %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold badge-income">
+                                        <i class="fa-solid fa-arrow-down mr-1 text-[10px]"></i>Thu nhập
+                                    </span>
+                                {% elif tx.type == 'expense' %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold badge-expense">
+                                        <i class="fa-solid fa-arrow-up mr-1 text-[10px]"></i>Chi tiêu
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold badge-transfer">
+                                        <i class="fa-solid fa-arrow-right-arrow-left mr-1 text-[10px]"></i>Chuyển ví
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <!-- Category -->
+                            <td class="py-3.5 px-4 whitespace-nowrap">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: {{ tx.category_color or '#3b82f6' }}"></span>
+                                    <span class="font-semibold text-slate-800">{{ tx.category_name or 'Chuyển quỹ' }}</span>
+                                </div>
+                            </td>
+                            <!-- Account -->
+                            <td class="py-3.5 px-4 whitespace-nowrap text-slate-600">
+                                {% if tx.type == 'transfer' %}
+                                    <span class="font-medium text-slate-700">{{ tx.account_name }}</span>
+                                    <i class="fa-solid fa-arrow-right text-[10px] text-blue-500 mx-1"></i>
+                                    <span class="font-medium text-blue-600">{{ tx.to_account_name }}</span>
+                                {% else %}
+                                    <span class="font-medium text-slate-700">{{ tx.account_name }}</span>
+                                {% endif %}
+                            </td>
+                            <!-- Member -->
+                            <td class="py-3.5 px-4 whitespace-nowrap">
+                                {% if tx.member_name %}
+                                    <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-medium">
+                                        <span class="w-2 h-2 rounded-full" style="background-color: {{ tx.member_color or '#10b981' }}"></span>
+                                        {{ tx.member_name }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-xs text-slate-400">Chung</span>
+                                {% endif %}
+                            </td>
+                            <!-- Note -->
+                            <td class="py-3.5 px-4 text-slate-500 max-w-xs truncate">
+                                {{ tx.note or '—' }}
+                            </td>
+                            <!-- Amount -->
+                            <td class="py-3.5 px-4 whitespace-nowrap text-right font-bold {% if tx.type == 'income' %}text-emerald-600{% elif tx.type == 'expense' %}text-rose-600{% else %}text-blue-600{% endif %}">
+                                {% if tx.type == 'income' %}+{% elif tx.type == 'expense' %}-{% endif %}{{ tx.amount | currency }}
+                            </td>
+                            <!-- Action -->
+                            <td class="py-3.5 px-4 whitespace-nowrap text-center">
+                                <div class="inline-flex items-center gap-1">
+                                    <button onclick="editTransaction({{ tx.id }})" title="Chỉnh sửa" class="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                                        <i class="fa-regular fa-pen-to-square text-xs"></i>
+                                    </button>
+                                    <button onclick="deleteTransaction({{ tx.id }})" title="Xóa" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors">
+                                        <i class="fa-regular fa-trash-can text-xs"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-12 text-slate-400">
+                                <i class="fa-solid fa-receipt text-3xl mb-2 text-slate-300"></i>
+                                <p class="text-sm">Không tìm thấy giao dịch nào phù hợp với bộ lọc.</p>
+                                <a href="/transactions" class="text-xs font-bold text-blue-600 hover:underline mt-2 inline-block">Xóa bộ lọc để xem tất cả</a>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if total_pages > 1 %}
+        <div class="p-4 border-t border-slate-100 flex items-center justify-between">
+            <div class="text-xs text-slate-500">
+                Hiển thị trang <strong>{{ page }}</strong> trên tổng số <strong>{{ total_pages }}</strong> trang
+            </div>
+            <div class="flex items-center gap-1">
+                {% if page > 1 %}
+                    <a href="?page={{ page - 1 }}&start_date={{ start_date }}&end_date={{ end_date }}&type={{ tx_type }}&account_id={{ account_id }}&category_id={{ category_id }}&member_id={{ member_id }}&search={{ search }}" class="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+                        Trước
+                    </a>
+                {% endif %}
+                {% for p in range(1, total_pages + 1) %}
+                    {% if p == page %}
+                        <span class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold">{{ p }}</span>
+                    {% elif p <= 5 or p == total_pages %}
+                        <a href="?page={{ p }}&start_date={{ start_date }}&end_date={{ end_date }}&type={{ tx_type }}&account_id={{ account_id }}&category_id={{ category_id }}&member_id={{ member_id }}&search={{ search }}" class="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">{{ p }}</a>
+                    {% endif %}
+                {% endfor %}
+                {% if page < total_pages %}
+                    <a href="?page={{ page + 1 }}&start_date={{ start_date }}&end_date={{ end_date }}&type={{ tx_type }}&account_id={{ account_id }}&category_id={{ category_id }}&member_id={{ member_id }}&search={{ search }}" class="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+                        Sau
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- ================= EDIT TRANSACTION MODAL ================= -->
+<div id="editTxModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden border border-slate-100 animate-fade-in my-8">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+            <h3 class="font-bold text-lg text-slate-800">Chỉnh Sửa Giao Dịch</h3>
+            <button onclick="closeModal('editTxModal')" class="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-200">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+        <form id="editTxForm" class="p-6 space-y-4">
+            <input type="hidden" id="editTxId" name="tx_id">
+            
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Loại giao dịch</label>
+                <select name="type" id="editTxType" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-semibold text-sm bg-white">
+                    <option value="expense">Chi tiêu (-)</option>
+                    <option value="income">Thu nhập (+)</option>
+                    <option value="transfer">Chuyển khoản</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Số tiền (VNĐ)</label>
+                <input type="number" step="1000" name="amount" id="editTxAmount" required class="w-full text-xl font-bold text-slate-800 px-4 py-2.5 rounded-xl border border-slate-300">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Ngày thực hiện</label>
+                    <input type="date" name="transaction_date" id="editTxDate" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Thành viên</label>
+                    <select name="member_id" id="editTxMember" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium bg-white">
+                        {% for m in members %}
+                        <option value="{{ m.id }}">{{ m.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Hạng mục</label>
+                <select name="category_id" id="editTxCategory" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium bg-white">
+                    {% for c in categories %}
+                    <option value="{{ c.id }}">{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Tài khoản / Ví</label>
+                <select name="account_id" id="editTxAccount" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium bg-white">
+                    {% for a in accounts %}
+                    <option value="{{ a.id }}">{{ a.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Ghi chú</label>
+                <input type="text" name="note" id="editTxNote" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm">
+            </div>
+
+            <div class="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
+                <button type="button" onclick="closeModal('editTxModal')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50">
+                    Đóng
+                </button>
+                <button type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-md shadow-blue-500/20">
+                    Cập nhật
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function editTransaction(txId) {
+    try {
+        const res = await fetch(`/api/transactions/${txId}`);
+        const result = await res.json();
+        if (result.success) {
+            const tx = result.data;
+            document.getElementById('editTxId').value = tx.id;
+            document.getElementById('editTxType').value = tx.type;
+            document.getElementById('editTxAmount').value = tx.amount;
+            document.getElementById('editTxDate').value = tx.transaction_date;
+            document.getElementById('editTxCategory').value = tx.category_id || '';
+            document.getElementById('editTxAccount').value = tx.account_id || '';
+            document.getElementById('editTxMember').value = tx.member_id || '';
+            document.getElementById('editTxNote').value = tx.note || '';
+
+            openModal('editTxModal');
+        } else {
+            Swal.fire('Lỗi', result.message, 'error');
+        }
+    } catch(e) {
+        Swal.fire('Lỗi', 'Không thể tải thông tin giao dịch', 'error');
+    }
+}
+
+document.getElementById('editTxForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const txId = document.getElementById('editTxId').value;
+    const formData = new FormData(document.getElementById('editTxForm'));
+
+    try {
+        const res = await fetch(`/api/transactions/${txId}`, {
+            method: 'POST',
+            body: formData
+        });
+        const result = await res.json();
+        if (result.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Đã cập nhật!',
+                text: result.message,
+                timer: 1200,
+                showConfirmButton: false
+            }).then(() => window.location.reload());
+        } else {
+            Swal.fire('Lỗi', result.message, 'error');
+        }
+    } catch(e) {
+        Swal.fire('Lỗi', 'Có lỗi xảy ra khi cập nhật', 'error');
+    }
+});
+</script>
+{% endblock %}

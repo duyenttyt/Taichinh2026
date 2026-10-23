@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+
+{% block title %}Mục Tiêu Tiết Kiệm Gia Đình - HomeFinance{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-extrabold text-slate-800">Mục Tiêu Tiết Kiệm & Quỹ Gia Đình</h1>
+            <p class="text-sm text-slate-500">Lên kế hoạch và theo dõi các mục tiêu tài chính lớn: mua nhà, mua xe, du lịch, quỹ khẩn cấp</p>
+        </div>
+
+        <button onclick="openModal('addGoalModal')" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-md shadow-indigo-500/20 active:scale-95 transition-all">
+            <i class="fa-solid fa-plus text-xs"></i>
+            <span>Tạo mục tiêu mới</span>
+        </button>
+    </div>
+
+    <!-- Goals Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% if goals %}
+            {% for g in goals %}
+            {% set pct = (g.current_amount / g.target_amount * 100) if g.target_amount > 0 else 0 %}
+            <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group">
+                <div>
+                    <!-- Header -->
+                    <div class="flex items-start justify-between gap-3 mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-sm" style="background-color: {{ g.color }}">
+                                <i class="fa-solid fa-piggy-bank"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-base">{{ g.name }}</h3>
+                                <span class="text-xs text-slate-400">{{ g.category }}</span>
+                            </div>
+                        </div>
+
+                        {% if g.status == 'completed' or pct >= 100 %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
+                                <i class="fa-solid fa-check mr-1 text-[10px]"></i>Đạt mục tiêu!
+                            </span>
+                        {% else %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700">
+                                Đang tích lũy
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="space-y-1.5 my-4">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="font-semibold text-slate-500">Tiến độ tích lũy</span>
+                            <span class="font-extrabold text-indigo-600 text-sm">{{ "%.1f"|format(pct) }}%</span>
+                        </div>
+                        <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                            <div class="bg-gradient-to-r from-indigo-500 to-blue-600 h-3 rounded-full transition-all duration-500" style="width: {{ [pct, 100] | min }}%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Amounts and Deadline -->
+                    <div class="space-y-2 text-xs pt-2 border-t border-slate-100">
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400">Đã gom được:</span>
+                            <span class="font-extrabold text-slate-800 text-sm">{{ g.current_amount | currency }}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400">Mục tiêu cần đạt:</span>
+                            <span class="font-bold text-slate-600">{{ g.target_amount | currency }}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400">Còn thiếu:</span>
+                            <span class="font-bold text-rose-600">
+                                {{ [g.target_amount - g.current_amount, 0] | max | currency }}
+                            </span>
+                        </div>
+                        {% if g.deadline %}
+                        <div class="flex items-center justify-between pt-1 text-[11px] text-slate-400">
+                            <span><i class="fa-regular fa-calendar mr-1"></i>Hạn chót:</span>
+                            <span class="font-medium text-slate-600">{{ g.deadline | format_date }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Action Button & Delete -->
+                <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between gap-2">
+                    <button onclick="openDepositModal({{ g.id }}, '{{ g.name }}')" class="flex-1 py-2 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-colors flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-plus-circle text-indigo-600"></i>
+                        <span>Nạp thêm tiền</span>
+                    </button>
+                    <button onclick="deleteGoal({{ g.id }})" title="Xóa mục tiêu" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-600 p-2 rounded-lg transition-all">
+                        <i class="fa-regular fa-trash-can"></i>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-span-full py-16 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
+                <i class="fa-solid fa-piggy-bank text-4xl mb-3 text-slate-300"></i>
+                <p class="text-base font-semibold text-slate-700">Chưa có mục tiêu tiết kiệm nào</p>
+                <p class="text-xs text-slate-400 mt-1 max-w-md mx-auto">Thiết lập mục tiêu mua sắm lớn, quỹ dự phòng hoặc chuyến du lịch mơ ước để gia đình cùng chung tay tích lũy.</p>
+                <button onclick="openModal('addGoalModal')" class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700">
+                    <i class="fa-solid fa-plus"></i> Tạo mục tiêu đầu tiên
+                </button>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- ================= CREATE GOAL MODAL ================= -->
+<div id="addGoalModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-100 animate-fade-in my-8">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+            <h3 class="font-bold text-lg text-slate-800">Tạo Mục Tiêu Tiết Kiệm Mới</h3>
+            <button onclick="closeModal('addGoalModal')" class="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-200">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <form id="addGoalForm" class="p-6 space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Tên mục tiêu <span class="text-red-500">*</span></label>
+                <input type="text" name="name" placeholder="Ví dụ: Mua ô tô mới, Quỹ du lịch Châu Âu, Quỹ khẩn cấp..." required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-medium text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Số tiền mục tiêu <span class="text-red-500">*</span></label>
+                    <input type="number" step="1000000" min="100000" name="target_amount" placeholder="Ví dụ: 200000000" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Đã có sẵn (VNĐ)</label>
+                    <input type="number" step="1000000" name="current_amount" value="0" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Hạn chót hoàn thành</label>
+                    <input type="date" name="deadline" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Màu nhận diện</label>
+                    <input type="color" name="color" value="#6366f1" class="w-full h-10 p-1 rounded-xl border border-slate-300 cursor-pointer bg-white">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Phân loại</label>
+                <select name="category" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <option value="Mua sắm lớn">Mua sắm tài sản lớn (Nhà, Xe...)</option>
+                    <option value="Khẩn cấp">Quỹ dự phòng khẩn cấp</option>
+                    <option value="Du lịch">Du lịch & Nghỉ mát</option>
+                    <option value="Giáo dục">Quỹ học hành cho con</option>
+                    <option value="Đầu tư">Đầu tư sinh lời</option>
+                    <option value="Khác">Khác</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Ghi chú</label>
+                <input type="text" name="note" placeholder="Kế hoạch thực hiện mục tiêu..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+
+            <div class="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
+                <button type="button" onclick="closeModal('addGoalModal')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50">
+                    Đóng
+                </button>
+                <button type="submit" class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-md shadow-indigo-500/20">
+                    Tạo mục tiêu
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ================= DEPOSIT MODAL ================= -->
+<div id="depositModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-100 animate-fade-in my-8">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+            <div>
+                <h3 class="font-bold text-lg text-slate-800">Nạp Tiền Vào Mục Tiêu</h3>
+                <span id="depositGoalName" class="text-xs text-indigo-600 font-semibold"></span>
+            </div>
+            <button onclick="closeModal('depositModal')" class="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-200">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <form id="depositForm" class="p-6 space-y-4">
+            <input type="hidden" id="depositGoalId" name="goal_id">
+
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Số tiền nạp thêm (VNĐ) <span class="text-red-500">*</span></label>
+                <input type="number" step="100000" min="10000" name="amount" id="depositAmount" placeholder="Ví dụ: 5000000" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold text-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Trừ từ ví / tài khoản nào?</label>
+                <select name="account_id" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <option value="">-- Không trừ ví (chỉ ghi nhận tiến độ) --</option>
+                    {% for a in accounts %}
+                    <option value="{{ a.id }}">{{ a.name }} (Số dư: {{ a.current_balance | currency }})</option>
+                    {% endfor %}
+                </select>
+                <span class="text-[11px] text-slate-400 mt-1 block">Nếu chọn tài khoản, hệ thống sẽ tự động trừ số dư ví tương ứng.</span>
+            </div>
+
+            <div class="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
+                <button type="button" onclick="closeModal('depositModal')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50">
+                    Đóng
+                </button>
+                <button type="submit" class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-md shadow-indigo-500/20">
+                    Xác nhận nạp
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openDepositModal(goalId, goalName) {
+    document.getElementById('depositGoalId').value = goalId;
+    document.getElementById('depositGoalName').innerText = 'Mục tiêu: ' + goalName;
+    document.getElementById('depositAmount').value = '';
+    openModal('depositModal');
+}
+
+document.getElementById('addGoalForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(document.getElementById('addGoalForm'));
+    try {
+        const res = await fetch('/api/goals', { method: 'POST', body: formData });
+        const result = await res.json();
+        if (result.success) {
+            Swal.fire({ icon: 'success', title: 'Đã tạo mục tiêu!', timer: 1000, showConfirmButton: false })
+                .then(() => window.location.reload());
+        } else {
+            Swal.fire('Lỗi', result.message, 'error');
+        }
+    } catch(e) {
+        Swal.fire('Lỗi', 'Không thể tạo mục tiêu', 'error');
+    }
+});
+
+document.getElementById('depositForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const goalId = document.getElementById('depositGoalId').value;
+    const formData = new FormData(document.getElementById('depositForm'));
+    try {
+        const res = await fetch(`/api/goals/${goalId}/deposit`, { method: 'POST', body: formData });
+        const result = await res.json();
+        if (result.success) {
+            Swal.fire({ icon: 'success', title: 'Đã nạp tiền!', text: result.message, timer: 1200, showConfirmButton: false })
+                .then(() => window.location.reload());
+        } else {
+            Swal.fire('Lỗi', result.message, 'error');
+        }
+    } catch(e) {
+        Swal.fire('Lỗi', 'Có lỗi xảy ra', 'error');
+    }
+});
+
+async function deleteGoal(gId) {
+    const confirm = await Swal.fire({
+        title: 'Xóa mục tiêu này?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        confirmButtonText: 'Xóa',
+        cancelButtonText: 'Hủy'
+    });
+    if (confirm.isConfirmed) {
+        try {
+            const res = await fetch(`/api/goals/${gId}/delete`, { method: 'POST' });
+            const result = await res.json();
+            if (result.success) {
+                Swal.fire({ icon: 'success', title: 'Đã xóa!', timer: 1000, showConfirmButton: false })
+                    .then(() => window.location.reload());
+            }
+        } catch(e) {
+            Swal.fire('Lỗi', 'Có lỗi xảy ra', 'error');
+        }
+    }
+}
+</script>
+{% endblock %}

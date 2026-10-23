@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Hạng Mục Thu - Chi - HomeFinance{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-extrabold text-slate-800">Danh Mục Thu & Chi</h1>
+            <p class="text-sm text-slate-500">Tùy biến các nhóm thu nhập và nhóm chi tiêu phù hợp với thói quen sinh hoạt gia đình bạn</p>
+        </div>
+
+        <button onclick="openModal('addCategoryModal')" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-md shadow-blue-500/20 active:scale-95 transition-all">
+            <i class="fa-solid fa-plus text-xs"></i>
+            <span>Thêm danh mục mới</span>
+        </button>
+    </div>
+
+    <!-- 2 Column Layout: Income Categories vs Expense Categories -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Income Categories -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-emerald-50/50">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-arrow-down text-xs"></i>
+                    </div>
+                    <h3 class="font-bold text-slate-800 text-base">Danh Mục Thu Nhập</h3>
+                </div>
+                <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Nguồn tiền vào</span>
+            </div>
+
+            <div class="divide-y divide-slate-100">
+                {% for c in categories if c.type == 'income' %}
+                <div class="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors group">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold" style="background-color: {{ c.color }}">
+                            <i class="fa-solid fa-tag text-xs"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-slate-800 text-sm">{{ c.name }}</div>
+                            <div class="text-xs text-slate-400 mt-0.5">
+                                <span>{{ c.tx_count }} giao dịch</span>
+                                <span>•</span>
+                                <span class="font-semibold text-emerald-600">+{{ c.total_amount | currency }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-1">
+                        <a href="/transactions?category_id={{ c.id }}" title="Xem giao dịch" class="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                            <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                        </a>
+                        <button onclick="deleteCategory({{ c.id }})" title="Xóa danh mục" class="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all">
+                            <i class="fa-regular fa-trash-can text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Expense Categories -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-rose-50/50">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-arrow-up text-xs"></i>
+                    </div>
+                    <h3 class="font-bold text-slate-800 text-base">Danh Mục Chi Tiêu</h3>
+                </div>
+                <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">Dòng tiền chi ra</span>
+            </div>
+
+            <div class="divide-y divide-slate-100">
+                {% for c in categories if c.type == 'expense' %}
+                <div class="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors group">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold" style="background-color: {{ c.color }}">
+                            <i class="fa-solid fa-tag text-xs"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-slate-800 text-sm">{{ c.name }}</div>
+                            <div class="text-xs text-slate-400 mt-0.5">
+                                <span>{{ c.tx_count }} giao dịch</span>
+                                <span>•</span>
+                                <span class="font-semibold text-rose-600">-{{ c.total_amount | currency }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-1">
+                        <a href="/transactions?category_id={{ c.id }}" title="Xem giao dịch" class="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                            <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                        </a>
+                        <button onclick="deleteCategory({{ c.id }})" title="Xóa danh mục" class="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all">
+                            <i class="fa-regular fa-trash-can text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ================= ADD CATEGORY MODAL ================= -->
+<div id="addCategoryModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-100 animate-fade-in my-8">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+            <h3 class="font-bold text-lg text-slate-800">Thêm Danh Mục Mới</h3>
+            <button onclick="closeModal('addCategoryModal')" class="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-200">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <form id="addCategoryForm" class="p-6 space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Loại danh mục</label>
+                <select name="type" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-semibold text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option value="expense">Chi tiêu (-)</option>
+                    <option value="income">Thu nhập (+)</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Tên danh mục <span class="text-red-500">*</span></label>
+                <input type="text" name="name" placeholder="Ví dụ: Tiền điện nước, Mua sách, Thú cưng..." required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-medium text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Màu nhận diện</label>
+                <input type="color" name="color" value="#3b82f6" class="w-full h-10 p-1 rounded-xl border border-slate-300 cursor-pointer bg-white">
+            </div>
+
+            <div class="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
+                <button type="button" onclick="closeModal('addCategoryModal')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50">
+                    Đóng
+                </button>
+                <button type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-md shadow-blue-500/20">
+                    Lưu danh mục
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('addCategoryForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(document.getElementById('addCategoryForm'));
+    try {
+        const res = await fetch('/api/categories', { method: 'POST', body: formData });
+        const result = await res.json();
+        if (result.success) {
+            Swal.fire({ icon: 'success', title: 'Đã lưu danh mục!', timer: 1000, showConfirmButton: false })
+                .then(() => window.location.reload());
+        } else {
+            Swal.fire('Lỗi', result.message, 'error');
+        }
+    } catch(e) {
+        Swal.fire('Lỗi', 'Không thể lưu danh mục', 'error');
+    }
+});
+
+async function deleteCategory(cId) {
+    const confirm = await Swal.fire({
+        title: 'Xóa danh mục này?',
+        text: 'Các giao dịch đã liên kết sẽ hiển thị ở nhóm chung.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        confirmButtonText: 'Xóa',
+        cancelButtonText: 'Hủy'
+    });
+    if (confirm.isConfirmed) {
+        try {
+            const res = await fetch(`/api/categories/${cId}/delete`, { method: 'POST' });
+            const result = await res.json();
+            if (result.success) {
+                Swal.fire({ icon: 'success', title: 'Đã xóa!', timer: 1000, showConfirmButton: false })
+                    .then(() => window.location.reload());
+            }
+        } catch(e) {
+            Swal.fire('Lỗi', 'Có lỗi xảy ra', 'error');
+        }
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+
+{% block title %}Báo Cáo Phân Tích Tài Chính - HomeFinance{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header & Filter Selector -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-extrabold text-slate-800">Báo Cáo Phân Tích Tài Chính</h1>
+            <p class="text-sm text-slate-500">Báo cáo dòng tiền, cơ cấu chi tiêu và tỷ trọng của các thành viên</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <!-- Month & Year selector form -->
+            <form method="GET" action="/reports" class="flex items-center gap-2 bg-white p-1 rounded-2xl border border-slate-200/80 shadow-sm">
+                <select name="month" onchange="this.form.submit()" class="px-3 py-1.5 rounded-xl text-sm font-bold text-slate-700 bg-slate-50 border-none focus:ring-2 focus:ring-blue-500 outline-none">
+                    {% for m in range(1, 13) %}
+                    <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>Tháng {{ m }}</option>
+                    {% endfor %}
+                </select>
+                <select name="year" onchange="this.form.submit()" class="px-3 py-1.5 rounded-xl text-sm font-bold text-slate-700 bg-slate-50 border-none focus:ring-2 focus:ring-blue-500 outline-none">
+                    {% for y in range(selected_year - 2, selected_year + 3) %}
+                    <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>Năm {{ y }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+
+            <!-- Print Button -->
+            <button onclick="window.print()" class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold shadow-sm transition-all no-print">
+                <i class="fa-solid fa-print"></i>
+                <span class="hidden sm:inline">In Báo Cáo</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Executive Summary Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Tổng Thu Nhập</span>
+            <div class="text-2xl font-extrabold text-emerald-600 mt-2">+{{ total_income | currency }}</div>
+            <div class="text-xs text-slate-400 mt-1">Nguồn thu trong tháng {{ selected_month }}/{{ selected_year }}</div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Tổng Chi Tiêu</span>
+            <div class="text-2xl font-extrabold text-rose-600 mt-2">-{{ total_expense | currency }}</div>
+            <div class="text-xs text-slate-400 mt-1">Đã giải ngân trong tháng</div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Dư Tích Lũy Ròng</span>
+            <div class="text-2xl font-extrabold {% if net_savings >= 0 %}text-indigo-600{% else %}text-rose-600{% endif %} mt-2">
+                {{ net_savings | currency }}
+            </div>
+            <div class="text-xs text-slate-400 mt-1">Thu nhập trừ Chi tiêu</div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Tỷ Lệ Tiết Kiệm</span>
+            <div class="text-2xl font-extrabold text-blue-600 mt-2">{{ "%.1f"|format(savings_rate) }}%</div>
+            <div class="text-xs text-slate-400 mt-1">Mục tiêu gia đình: &ge; 20%</div>
+        </div>
+    </div>
+
+    <!-- Charts Row: Expense Categories & Member Spending -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Expense Breakdown Chart -->
+        <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm">
+            <h3 class="font-bold text-slate-800 text-base mb-1">Cơ Cấu Chi Tiêu Theo Danh Mục</h3>
+            <p class="text-xs text-slate-400 mb-4">Tỷ trọng các nhóm chi tiêu trong tháng {{ selected_month }}</p>
+            <div class="h-64 relative flex items-center justify-center">
+                <canvas id="reportExpenseChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Member Spending Breakdown Chart -->
+        <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm">
+            <h3 class="font-bold text-slate-800 text-base mb-1">Chi Tiêu Theo Từng Thành Viên</h3>
+            <p class="text-xs text-slate-400 mb-4">Khoản tiền từng thành viên trong gia đình đã chi</p>
+            <div class="h-64 relative flex items-center justify-center">
+                <canvas id="reportMemberChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Expense Breakdown Table -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div>
+                <h3 class="font-bold text-slate-800 text-base">Bảng Phân Tích Chi Tiêu Chi Tiết</h3>
+                <p class="text-xs text-slate-400">So sánh thực tế chi tiêu với ngân sách dự kiến</p>
+            </div>
+            <span class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700">Tổng chi: {{ total_expense | currency }}</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm border-collapse">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider border-b border-slate-200">
+                        <th class="py-3 px-4">Hạng mục chi</th>
+                        <th class="py-3 px-4 text-right">Số tiền đã chi</th>
+                        <th class="py-3 px-4 text-center">Tỷ trọng</th>
+                        <th class="py-3 px-4 text-right">Ngân sách</th>
+                        <th class="py-3 px-4 text-center">Trạng thái</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% if expense_by_category %}
+                        {% for item in expense_by_category %}
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="py-3.5 px-4 font-semibold text-slate-800 flex items-center gap-2.5">
+                                <span class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: {{ item.color }}"></span>
+                                <span>{{ item.name }}</span>
+                            </td>
+                            <td class="py-3.5 px-4 text-right font-bold text-rose-600">
+                                {{ item.amount | currency }}
+                            </td>
+                            <td class="py-3.5 px-4 text-center font-semibold text-slate-600">
+                                {{ item.percentage or 0 }}%
+                            </td>
+                            <td class="py-3.5 px-4 text-right text-slate-600 font-medium">
+                                {{ (item.budget_amount | currency) if item.budget_amount else 'Chưa đặt' }}
+                            </td>
+                            <td class="py-3.5 px-4 text-center">
+                                {% if item.budget_amount %}
+                                    {% if item.amount > item.budget_amount %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
+                                            <i class="fa-solid fa-triangle-exclamation mr-1 text-[10px]"></i>Vượt {{ (item.amount - item.budget_amount) | currency }}
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+                                            <i class="fa-solid fa-check mr-1 text-[10px]"></i>Trong hạn mức
+                                        </span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-xs text-slate-400">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="py-8 text-center text-slate-400 text-sm">
+                                Chưa có giao dịch chi tiêu nào trong tháng {{ selected_month }}/{{ selected_year }}.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Family Member Contribution & Spending Table -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 bg-slate-50/50">
+            <h3 class="font-bold text-slate-800 text-base">Thống Kê Đóng Góp & Chi Tiêu Theo Thành Viên</h3>
+            <p class="text-xs text-slate-400">Bức tranh tài chính của từng người trong gia đình tháng {{ selected_month }}/{{ selected_year }}</p>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm border-collapse">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider border-b border-slate-200">
+                        <th class="py-3 px-4">Thành viên</th>
+                        <th class="py-3 px-4">Vai trò</th>
+                        <th class="py-3 px-4 text-right">Thu nhập đóng góp</th>
+                        <th class="py-3 px-4 text-right">Chi tiêu phụ trách</th>
+                        <th class="py-3 px-4 text-right">Đóng góp ròng</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for m in member_stats %}
+                    {% set net_contrib = (m.member_income or 0) - (m.member_expense or 0) %}
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="py-3.5 px-4 font-bold text-slate-800 flex items-center gap-2.5">
+                            <span class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold" style="background-color: {{ m.avatar_color }}">
+                                {{ m.name[0] }}
+                            </span>
+                            <span>{{ m.name }}</span>
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-500 text-xs font-medium">{{ m.role }}</td>
+                        <td class="py-3.5 px-4 text-right font-bold text-emerald-600">
+                            +{{ (m.member_income or 0) | currency }}
+                        </td>
+                        <td class="py-3.5 px-4 text-right font-bold text-rose-600">
+                            -{{ (m.member_expense or 0) | currency }}
+                        </td>
+                        <td class="py-3.5 px-4 text-right font-bold {% if net_contrib >= 0 %}text-indigo-600{% else %}text-amber-600{% endif %}">
+                            {{ net_contrib | currency }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Financial Health & Smart Advice Card -->
+    <div class="bg-gradient-to-br from-indigo-50 to-blue-50 border border-blue-200 rounded-3xl p-6">
+        <div class="flex items-start gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-xl flex-shrink-0 shadow-md shadow-blue-500/20">
+                <i class="fa-solid fa-lightbulb"></i>
+            </div>
+            <div class="space-y-2">
+                <h4 class="font-bold text-slate-800 text-base">Lời Khuyên Tài Chính Cho Gia Đình (Quy Tắc 50/30/20)</h4>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                    Theo chuẩn quản lý tài chính gia đình hiện đại, thu nhập hàng tháng nên được phân bổ:
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
+                    <div class="bg-white p-3 rounded-xl border border-blue-100 shadow-sm">
+                        <span class="font-bold text-blue-700">50% Nhu Cầu Cốt Lõi:</span>
+                        <p class="text-slate-500 mt-1">Ăn uống, thuê nhà, điện nước, học phí con cái, đi lại hàng ngày.</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl border border-blue-100 shadow-sm">
+                        <span class="font-bold text-indigo-700">30% Mong Muốn & Tận Hưởng:</span>
+                        <p class="text-slate-500 mt-1">Du lịch, giải trí, mua sắm đồ công nghệ, gặp gỡ bạn bè cuối tuần.</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl border border-blue-100 shadow-sm">
+                        <span class="font-bold text-emerald-700">20% Tích Lũy & Đầu Tư:</span>
+                        <p class="text-slate-500 mt-1">Quỹ khẩn cấp (3-6 tháng sinh hoạt), sổ tiết kiệm, bảo hiểm và đầu tư sinh lời.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Category Chart
+    try {
+        const resCat = await fetch('/api/charts/category-expenses?month={{ selected_month }}&year={{ selected_year }}');
+        const dataCat = await resCat.json();
+
+        if (dataCat.labels.length > 0) {
+            new Chart(document.getElementById('reportExpenseChart'), {
+                type: 'pie',
+                data: {
+                    labels: dataCat.labels,
+                    datasets: [{
+                        data: dataCat.data,
+                        backgroundColor: dataCat.colors
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(c) {
+                                    return c.label + ': ' + formatVND(c.raw);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    } catch(e) {
+        console.error(e);
+    }
+
+    // 2. Member Chart
+    try {
+        const resMem = await fetch('/api/charts/member-spending?month={{ selected_month }}&year={{ selected_year }}');
+        const dataMem = await resMem.json();
+
+        if (dataMem.labels.length > 0) {
+            new Chart(document.getElementById('reportMemberChart'), {
+                type: 'bar',
+                data: {
+                    labels: dataMem.labels,
+                    datasets: [{
+                        label: 'Chi tiêu',
+                        data: dataMem.data,
+                        backgroundColor: dataMem.colors,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(c) {
+                                    return 'Đã chi: ' + formatVND(c.raw);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: {
+                            ticks: {
+                                callback: function(val) {
+                                    if (val >= 1000000) return (val/1000000) + ' Tr';
+                                    return val;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    } catch(e) {
+        console.error(e);
+    }
+});
+</script>
+{% endblock %}

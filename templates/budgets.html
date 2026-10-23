@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}Hạn Mức Ngân Sách Chi Tiêu - HomeFinance{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header & Actions -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-extrabold text-slate-800">Quản Lý Ngân Sách Chi Tiêu</h1>
+            <p class="text-sm text-slate-500">Thiết lập hạn mức chi tiêu cho từng danh mục để kiểm soát tài chính gia đình</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <!-- Month Selector -->
+            <form method="GET" action="/budgets" class="flex items-center gap-2 bg-white p-1 rounded-2xl border border-slate-200/80 shadow-sm">
+                <select name="month" onchange="this.form.submit()" class="px-3 py-1.5 rounded-xl text-sm font-bold text-slate-700 bg-slate-50 border-none focus:ring-2 focus:ring-blue-500 outline-none">
+                    {% for m in range(1, 13) %}
+                    <option value="{{ m }}" {% if m == month %}selected{% endif %}>Tháng {{ m }}</option>
+                    {% endfor %}
+                </select>
+                <select name="year" onchange="this.form.submit()" class="px-3 py-1.5 rounded-xl text-sm font-bold text-slate-700 bg-slate-50 border-none focus:ring-2 focus:ring-blue-500 outline-none">
+                    {% for y in range(year - 1, year + 2) %}
+                    <option value="{{ y }}" {% if y == year %}selected{% endif %}>Năm {{ y }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+
+            <!-- Add Budget Button -->
+            <button onclick="openModal('setBudgetModal')" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-md shadow-blue-500/20 active:scale-95 transition-all">
+                <i class="fa-solid fa-plus text-xs"></i>
+                <span>Đặt hạn mức mới</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary KPI Bar -->
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Tổng Hạn Mức Định Mức</span>
+            <div class="text-2xl font-extrabold text-slate-800 mt-2">{{ total_budget | currency }}</div>
+            <div class="text-xs text-slate-400 mt-1">Cho {{ budgets | length }} hạng mục</div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Thực Tế Đã Chi</span>
+            <div class="text-2xl font-extrabold text-rose-600 mt-2">{{ total_spent | currency }}</div>
+            <div class="text-xs text-slate-400 mt-1">Đến ngày hôm nay</div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Còn Lại Khả Dụng</span>
+            {% set total_rem = total_budget - total_spent %}
+            <div class="text-2xl font-extrabold {% if total_rem >= 0 %}text-emerald-600{% else %}text-rose-600{% endif %} mt-2">
+                {{ total_rem | currency }}
+            </div>
+            <div class="text-xs text-slate-400 mt-1">Cho phần còn lại của tháng</div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Tỷ Lệ Đã Chi</span>
+            {% set total_pct = (total_spent / total_budget * 100) if total_budget > 0 else 0 %}
+            <div class="text-2xl font-extrabold {% if total_pct > 100 %}text-rose-600{% elif total_pct >= 80 %}text-amber-600{% else %}text-blue-600{% endif %} mt-2">
+                {{ "%.1f"|format(total_pct) }}%
+            </div>
+            <div class="text-xs text-slate-400 mt-1">Hạn mức chi tiêu tháng</div>
+        </div>
+    </div>
+
+    <!-- Budgets List Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% if budgets %}
+            {% for b in budgets %}
+            {% set pct = (b.total_spent / b.amount * 100) if b.amount > 0 else 0 %}
+            {% set rem = b.amount - b.total_spent %}
+            <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group">
+                <div>
+                    <!-- Header -->
+                    <div class="flex items-start justify-between gap-3 mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold" style="background-color: {{ b.category_color }}">
+                                <i class="fa-solid fa-tags text-xs"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-sm">{{ b.category_name }}</h3>
+                                <span class="text-xs text-slate-400">Hạn mức tháng {{ month }}/{{ year }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Status Badge -->
+                        {% if pct > 100 %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700 animate-pulse">
+                                Vượt {{ (b.total_spent - b.amount) | currency }}
+                            </span>
+                        {% elif pct >= 80 %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700">
+                                Cảnh báo 80%
+                            </span>
+                        {% else %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
+                                An toàn
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="space-y-1.5 my-4">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="font-semibold text-slate-500">Tiến độ chi</span>
+                            <span class="font-bold {% if pct > 100 %}text-rose-600{% elif pct >= 80 %}text-amber-600{% else %}text-emerald-600{% endif %}">
+                                {{ "%.1f"|format(pct) }}%
+                            </span>
+                        </div>
+                        <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                            <div class="h-2.5 rounded-full transition-all duration-500 {% if pct > 100 %}bg-rose-500{% elif pct >= 80 %}bg-amber-500{% else %}bg-emerald-500{% endif %}" style="width: {{ [pct, 100] | min }}%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Breakdown Numbers -->
+                    <div class="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-100">
+                        <div>
+                            <span class="text-slate-400">Đã chi:</span>
+                            <div class="font-bold text-slate-700">{{ b.total_spent | currency }}</div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-slate-400">Còn lại:</span>
+                            <div class="font-bold {% if rem >= 0 %}text-emerald-600{% else %}text-rose-600{% endif %}">
+                                {{ rem | currency }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer with delete -->
+                <div class="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <span class="text-slate-400">Hạn mức: <strong class="text-slate-700">{{ b.amount | currency }}</strong></span>
+                    <button onclick="deleteBudget({{ b.id }})" title="Xóa hạn mức" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-600 p-1 rounded transition-all">
+                        <i class="fa-regular fa-trash-can"></i>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-span-full py-16 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
+                <i class="fa-solid fa-bullseye text-4xl mb-3 text-slate-300"></i>
+                <p class="text-base font-semibold text-slate-700">Chưa có ngân sách nào cho tháng {{ month }}/{{ year }}</p>
+                <p class="text-xs text-slate-400 mt-1 max-w-md mx-auto">Thiết lập các hạn mức chi tiêu như Ăn uống, Giải trí, Mua sắm để ứng dụng cảnh báo khi bạn chi tiêu sắp chạm mốc.</p>
+                <button onclick="openModal('setBudgetModal')" class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700">
+                    <i class="fa-solid fa-plus"></i> Đặt ngân sách ngay
+                </button>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- ================= SET BUDGET MODAL ================= -->
+<div id="setBudgetModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-100 animate-fade-in my-8">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+            <h3 class="font-bold text-lg text-slate-800">Đặt Hạn Mức Ngân Sách</h3>
+            <button onclick="closeModal('setBudgetModal')" class="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-200">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <form id="setBudgetForm" class="p-6 space-y-4">
+            <input type="hidden" name="month" value="{{ month }}">
+            <input type="hidden" name="year" value="{{ year }}">
+
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Danh mục chi tiêu <span class="text-red-500">*</span></label>
+                <select name="category_id" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-medium text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                    {% for c in available_categories %}
+                    <option value="{{ c.id }}">{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Hạn mức chi tiêu tối đa (VNĐ) <span class="text-red-500">*</span></label>
+                <input type="number" step="100000" min="100000" name="amount" placeholder="Ví dụ: 8000000" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold text-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                <span class="text-xs text-slate-400 mt-1 block">Áp dụng cho Tháng {{ month }}/{{ year }}</span>
+            </div>
+
+            <div class="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
+                <button type="button" onclick="closeModal('setBudgetModal')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50">
+                    Đóng
+                </button>
+                <button type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-md shadow-blue-500/20">
+                    Lưu ngân sách
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('setBudgetForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(document.getElementById('setBudgetForm'));
+    try {
+        const res = await fetch('/api/budgets', { method: 'POST', body: formData });
+        const result = await res.json();
+        if (result.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Đã lưu!',
+                timer: 1000,
+                showConfirmButton: false
+            }).then(() => window.location.reload());
+        }
+    } catch(e) {
+        Swal.fire('Lỗi', 'Không thể lưu ngân sách', 'error');
+    }
+});
+
+async function deleteBudget(bId) {
+    const confirm = await Swal.fire({
+        title: 'Xóa hạn mức này?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        confirmButtonText: 'Xóa',
+        cancelButtonText: 'Hủy'
+    });
+    if (confirm.isConfirmed) {
+        try {
+            const res = await fetch(`/api/budgets/${bId}/delete`, { method: 'POST' });
+            const result = await res.json();
+            if (result.success) {
+                Swal.fire({ icon: 'success', title: 'Đã xóa!', timer: 1000, showConfirmButton: false })
+                    .then(() => window.location.reload());
+            }
+        } catch(e) {
+            Swal.fire('Lỗi', 'Không thể xóa', 'error');
+        }
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Thành Viên Gia Đình - HomeFinance{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-extrabold text-slate-800">Thành Viên Trong Gia Đình</h1>
+            <p class="text-sm text-slate-500">Quản lý các thành viên tham gia đóng góp và chi tiêu quỹ chung</p>
+        </div>
+
+        <button onclick="openModal('addMemberModal')" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-md shadow-blue-500/20 active:scale-95 transition-all">
+            <i class="fa-solid fa-user-plus text-xs"></i>
+            <span>Thêm thành viên</span>
+        </button>
+    </div>
+
+    <!-- Members Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for m in members %}
+        <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group">
+            <div>
+                <!-- Top Row: Avatar & Name -->
+                <div class="flex items-start justify-between gap-3 mb-4">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-extrabold text-xl shadow-md" style="background-color: {{ m.avatar_color }}">
+                            {{ m.name[0] }}
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-base">{{ m.name }}</h3>
+                            <span class="inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 mt-1">
+                                {{ m.role }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <button onclick="deleteMember({{ m.id }})" title="Xóa thành viên" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-all">
+                        <i class="fa-regular fa-trash-can text-xs"></i>
+                    </button>
+                </div>
+
+                {% if m.note %}
+                <p class="text-xs text-slate-500 italic mb-4">"{{ m.note }}"</p>
+                {% endif %}
+
+                <!-- Metrics Box -->
+                <div class="bg-slate-50 rounded-xl p-3.5 space-y-2 border border-slate-100 text-xs">
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500">Đã đóng góp thu nhập:</span>
+                        <span class="font-bold text-emerald-600">+{{ m.total_income | currency }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-500">Đã chi tiêu:</span>
+                        <span class="font-bold text-rose-600">-{{ m.total_expense | currency }}</span>
+                    </div>
+                    <div class="flex items-center justify-between pt-1 border-t border-slate-200/60 font-semibold">
+                        <span class="text-slate-600">Đóng góp ròng:</span>
+                        <span class="font-bold {% if (m.total_income - m.total_expense) >= 0 %}text-indigo-600{% else %}text-amber-600{% endif %}">
+                            {{ (m.total_income - m.total_expense) | currency }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer: View transactions link -->
+            <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span class="text-slate-400">Giao dịch: <strong>{{ m.tx_count }}</strong></span>
+                <a href="/transactions?member_id={{ m.id }}" class="font-bold text-blue-600 hover:underline flex items-center gap-1">
+                    Xem lịch sử chi tiêu <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+<!-- ================= ADD MEMBER MODAL ================= -->
+<div id="addMemberModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-100 animate-fade-in my-8">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+            <h3 class="font-bold text-lg text-slate-800">Thêm Thành Viên Mới</h3>
+            <button onclick="closeModal('addMemberModal')" class="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-200">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <form id="addMemberForm" class="p-6 space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Họ và tên <span class="text-red-500">*</span></label>
+                <input type="text" name="name" placeholder="Ví dụ: Nguyễn Văn An, Trần Thị Mai..." required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-medium text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Vai trò</label>
+                    <select name="role" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                        <option value="Bố/Chồng">Bố / Chồng</option>
+                        <option value="Mẹ/Vợ">Mẹ / Vợ</option>
+                        <option value="Con cái">Con cái</option>
+                        <option value="Ông bà">Ông bà</option>
+                        <option value="Chung">Quỹ chung gia đình</option>
+                        <option value="Khác">Khác</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Màu đại diện</label>
+                    <input type="color" name="avatar_color" value="#3b82f6" class="w-full h-10 p-1 rounded-xl border border-slate-300 cursor-pointer bg-white">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Ghi chú</label>
+                <input type="text" name="note" placeholder="Thông tin thêm (nguồn thu, phụ trách mảng gì...)" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+
+            <div class="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
+                <button type="button" onclick="closeModal('addMemberModal')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50">
+                    Đóng
+                </button>
+                <button type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-md shadow-blue-500/20">
+                    Lưu thành viên
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('addMemberForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(document.getElementById('addMemberForm'));
+    try {
+        const res = await fetch('/api/members', { method: 'POST', body: formData });
+        const result = await res.json();
+        if (result.success) {
+            Swal.fire({ icon: 'success', title: 'Đã thêm thành viên!', timer: 1000, showConfirmButton: false })
+                .then(() => window.location.reload());
+        } else {
+            Swal.fire('Lỗi', result.message, 'error');
+        }
+    } catch(e) {
+        Swal.fire('Lỗi', 'Không thể thêm thành viên', 'error');
+    }
+});
+
+async function deleteMember(mId) {
+    const confirm = await Swal.fire({
+        title: 'Xóa thành viên này?',
+        text: 'Các giao dịch đã thực hiện vẫn sẽ được giữ lại trong hệ thống.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        confirmButtonText: 'Xóa',
+        cancelButtonText: 'Hủy'
+    });
+    if (confirm.isConfirmed) {
+        try {
+            const res = await fetch(`/api/members/${mId}/delete`, { method: 'POST' });
+            const result = await res.json();
+            if (result.success) {
+                Swal.fire({ icon: 'success', title: 'Đã xóa!', timer: 1000, showConfirmButton: false })
+                    .then(() => window.location.reload());
+            }
+        } catch(e) {
+            Swal.fire('Lỗi', 'Có lỗi xảy ra', 'error');
+        }
+    }
+}
+</script>
+{% endblock %}

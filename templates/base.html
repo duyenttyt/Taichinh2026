@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="vi" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Sổ Tài Chính Gia Đình{% endblock %}</title>
+    
+    <!-- Google Font Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Font Awesome 6 Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="h-full flex flex-col text-slate-800 antialiased selection:bg-blue-100 selection:text-blue-900">
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo & Brand -->
+                <div class="flex items-center gap-3">
+                    <a href="/" class="flex items-center gap-2.5 group">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
+                            <i class="fa-solid fa-wallet text-lg"></i>
+                        </div>
+                        <div>
+                            <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-blue-700 to-indigo-600 bg-clip-text text-transparent">HomeFinance</span>
+                            <span class="hidden sm:inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 ml-1.5">Gia Đình</span>
+                        </div>
+                    </a>
+                </div>
+
+                <!-- Navigation Links -->
+                <nav class="hidden md:flex items-center gap-1">
+                    <a href="/" class="px-3 py-2 rounded-lg text-sm font-semibold transition-all {% if request.endpoint == 'dashboard' %}bg-blue-50 text-blue-700{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+                        <i class="fa-solid fa-chart-pie mr-1.5"></i>Tổng quan
+                    </a>
+                    <a href="/transactions" class="px-3 py-2 rounded-lg text-sm font-semibold transition-all {% if request.endpoint == 'transactions' %}bg-blue-50 text-blue-700{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+                        <i class="fa-solid fa-receipt mr-1.5"></i>Sổ Thu - Chi
+                    </a>
+                    <a href="/reports" class="px-3 py-2 rounded-lg text-sm font-semibold transition-all {% if request.endpoint == 'reports' %}bg-blue-50 text-blue-700{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+                        <i class="fa-solid fa-chart-line mr-1.5"></i>Báo cáo
+                    </a>
+                    <a href="/budgets" class="px-3 py-2 rounded-lg text-sm font-semibold transition-all {% if request.endpoint == 'budgets' %}bg-blue-50 text-blue-700{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+                        <i class="fa-solid fa-bullseye mr-1.5"></i>Ngân sách
+                    </a>
+                    <a href="/accounts" class="px-3 py-2 rounded-lg text-sm font-semibold transition-all {% if request.endpoint == 'accounts' %}bg-blue-50 text-blue-700{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+                        <i class="fa-solid fa-building-columns mr-1.5"></i>Ví & Tài khoản
+                    </a>
+                    <a href="/goals" class="px-3 py-2 rounded-lg text-sm font-semibold transition-all {% if request.endpoint == 'goals' %}bg-blue-50 text-blue-700{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+                        <i class="fa-solid fa-piggy-bank mr-1.5"></i>Tiết kiệm
+                    </a>
+
+                    <!-- More dropdown menu -->
+                    <div class="relative group">
+                        <button class="px-3 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-1">
+                            <span>Khác</span>
+                            <i class="fa-solid fa-chevron-down text-xs text-slate-400 group-hover:rotate-180 transition-transform"></i>
+                        </button>
+                        <div class="absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-lg border border-slate-100 py-1.5 hidden group-hover:block animate-fade-in">
+                            <a href="/members" class="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600">
+                                <i class="fa-solid fa-users w-4 text-slate-400"></i>Thành viên gia đình
+                            </a>
+                            <a href="/categories" class="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600">
+                                <i class="fa-solid fa-tags w-4 text-slate-400"></i>Hạng mục Thu - Chi
+                            </a>
+                            <div class="h-px bg-slate-100 my-1"></div>
+                            <button onclick="resetDemoData('sample')" class="w-full text-left flex items-center gap-2.5 px-4 py-2 text-sm text-blue-600 hover:bg-blue-50">
+                                <i class="fa-solid fa-rotate w-4"></i>Nạp lại mẫu dữ liệu
+                            </button>
+                            <button onclick="resetDemoData('clean')" class="w-full text-left flex items-center gap-2.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                                <i class="fa-solid fa-trash-can w-4"></i>Xóa trắng bắt đầu mới
+                            </button>
+                        </div>
+                    </div>
+                </nav>
+
+                <!-- Actions: Quick Add Transaction Button -->
+                <div class="flex items-center gap-3">
+                    <button onclick="openModal('quickAddModal')" class="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold text-sm px-4 py-2.5 rounded-xl shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 active:scale-95 transition-all">
+                        <i class="fa-solid fa-plus text-xs"></i>
+                        <span>Ghi Thu / Chi</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Navigation bar -->
+        <div class="md:hidden flex items-center justify-around border-t border-slate-100 bg-white py-2 px-1 text-xs font-medium text-slate-600">
+            <a href="/" class="flex flex-col items-center py-1 px-2 {% if request.endpoint == 'dashboard' %}text-blue-600 font-bold{% endif %}">
+                <i class="fa-solid fa-chart-pie text-base mb-1"></i>Tổng quan
+            </a>
+            <a href="/transactions" class="flex flex-col items-center py-1 px-2 {% if request.endpoint == 'transactions' %}text-blue-600 font-bold{% endif %}">
+                <i class="fa-solid fa-receipt text-base mb-1"></i>Thu - Chi
+            </a>
+            <a href="/reports" class="flex flex-col items-center py-1 px-2 {% if request.endpoint == 'reports' %}text-blue-600 font-bold{% endif %}">
+                <i class="fa-solid fa-chart-line text-base mb-1"></i>Báo cáo
+            </a>
+            <a href="/accounts" class="flex flex-col items-center py-1 px-2 {% if request.endpoint == 'accounts' %}text-blue-600 font-bold{% endif %}">
+                <i class="fa-solid fa-wallet text-base mb-1"></i>Ví tiền
+            </a>
+            <a href="/budgets" class="flex flex-col items-center py-1 px-2 {% if request.endpoint == 'budgets' %}text-blue-600 font-bold{% endif %}">
+                <i class="fa-solid fa-bullseye text-base mb-1"></i>Ngân sách
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 mt-12 py-6 text-center text-sm text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-bold">HF</div>
+                <span class="font-bold text-slate-700">HomeFinance</span> — Quản lý Tài chính Cá nhân & Gia đình Thông minh
+            </div>
+            <div class="flex items-center gap-4 text-xs text-slate-400">
+                <span>Dữ liệu lưu trữ SQLite Cục bộ & An toàn</span>
+                <span>•</span>
+                <button onclick="resetDemoData('sample')" class="hover:text-blue-600 underline">Dữ liệu mẫu</button>
+                <span>•</span>
+                <button onclick="resetDemoData('clean')" class="hover:text-red-600 underline">Xóa trắng</button>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ================= GLOBAL QUICK ADD MODAL ================= -->
+    <div id="quickAddModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden border border-slate-100 animate-fade-in my-8">
+            <!-- Modal Header -->
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center">
+                        <i class="fa-solid fa-plus text-sm"></i>
+                    </div>
+                    <h3 class="font-bold text-lg text-slate-800">Thêm Giao Dịch Mới</h3>
+                </div>
+                <button onclick="closeModal('quickAddModal')" class="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-200 transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Modal Form -->
+            <form id="quickAddForm" class="p-6 space-y-4">
+                <input type="hidden" name="type" id="txTypeInput" value="expense">
+
+                <!-- Type Selector Tab -->
+                <div class="flex p-1 bg-slate-100 rounded-xl">
+                    <button type="button" id="tab-btn-expense" onclick="switchTxTab('expense')" class="flex-1 py-2 font-semibold text-sm rounded-lg transition-colors bg-red-500 text-white shadow-sm">
+                        <i class="fa-solid fa-arrow-trend-down mr-1"></i>Chi tiêu
+                    </button>
+                    <button type="button" id="tab-btn-income" onclick="switchTxTab('income')" class="flex-1 py-2 font-medium text-sm rounded-lg transition-colors text-slate-500 hover:bg-slate-200">
+                        <i class="fa-solid fa-arrow-trend-up mr-1"></i>Thu nhập
+                    </button>
+                    <button type="button" id="tab-btn-transfer" onclick="switchTxTab('transfer')" class="flex-1 py-2 font-medium text-sm rounded-lg transition-colors text-slate-500 hover:bg-slate-200">
+                        <i class="fa-solid fa-arrow-right-arrow-left mr-1"></i>Chuyển ví
+                    </button>
+                </div>
+
+                <!-- Amount Input -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Số tiền (VNĐ) <span class="text-red-500">*</span></label>
+                    <div class="relative">
+                        <input type="number" step="1000" min="1000" name="amount" id="txAmountInput" placeholder="Ví dụ: 250000" required class="w-full text-2xl font-bold text-slate-800 pl-4 pr-12 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder:text-slate-300">
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">₫</span>
+                    </div>
+                </div>
+
+                <!-- Date & Member Row -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Ngày thực hiện</label>
+                        <input type="date" name="transaction_date" id="txDateInput" value="{{ today or '' }}" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-medium">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Thành viên</label>
+                        <select name="member_id" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-medium bg-white">
+                            {% for m in members %}
+                            <option value="{{ m.id }}">{{ m.name }} ({{ m.role }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Category Group (hidden on transfer) -->
+                <div id="categorySelectGroup">
+                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Hạng mục <span class="text-red-500">*</span></label>
+                    <select name="category_id" id="txCategorySelect" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-medium bg-white">
+                        {% for c in categories %}
+                        <option value="{{ c.id }}" data-type="{{ c.type }}">{{ c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Account / Wallet Selection -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label id="fromAccountLabel" class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Tài khoản / Ví</label>
+                        <select name="account_id" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-medium bg-white">
+                            {% for a in accounts %}
+                            <option value="{{ a.id }}">{{ a.name }} ({{ a.current_balance | currency }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <!-- To Account (Only for transfer) -->
+                    <div id="toAccountSelectGroup" class="hidden">
+                        <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Ví nhận tiền <span class="text-red-500">*</span></label>
+                        <select name="to_account_id" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm font-medium bg-white">
+                            {% for a in accounts %}
+                            <option value="{{ a.id }}">{{ a.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Note / Description -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Ghi chú chi tiết</label>
+                    <input type="text" name="note" placeholder="Ví dụ: Đi siêu thị WinMart, Mua sữa cho con..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+                </div>
+
+                <!-- Actions -->
+                <div class="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('quickAddModal')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-colors">
+                        Đóng
+                    </button>
+                    <button type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-md shadow-blue-500/20 active:scale-95 transition-all">
+                        <i class="fa-solid fa-floppy-disk mr-1.5"></i>Lưu giao dịch
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Set today's date into date picker -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const dateInput = document.getElementById('txDateInput');
+            if (dateInput && !dateInput.value) {
+                const today = new Date().toISOString().split('T')[0];
+                dateInput.value = today;
+            }
+        });
+    </script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
