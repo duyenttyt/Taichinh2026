@@ -93,6 +93,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const result = await res.json();
                 if (result.success) {
+                    if (window.logFirebaseEvent) {
+                        window.logFirebaseEvent('new_transaction', {
+                            type: formData.get('type'),
+                            amount: formData.get('amount')
+                        });
+                    }
                     Swal.fire({
                         icon: 'success',
                         title: 'Thành công!',

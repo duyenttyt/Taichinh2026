@@ -108,6 +108,10 @@
 
                 <!-- Actions: Quick Add Transaction Button -->
                 <div class="flex items-center gap-3">
+                    <div class="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-200/70 text-xs font-semibold" title="Firebase Connected: taichinhdemo-1ce08">
+                        <i class="fa-solid fa-fire text-amber-500"></i>
+                        <span>Firebase Live</span>
+                    </div>
                     <button onclick="openModal('quickAddModal')" class="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold text-sm px-4 py-2.5 rounded-xl shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 active:scale-95 transition-all">
                         <i class="fa-solid fa-plus text-xs"></i>
                         <span>Ghi Thu / Chi</span>
@@ -276,6 +280,7 @@
             }
         });
     </script>
+    <script type="module" src="{{ url_for('static', filename='js/firebase-config.js') }}"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
